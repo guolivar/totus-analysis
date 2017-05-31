@@ -4,11 +4,11 @@ library(ggplot2)
 library(gridExtra)
 library(grid)
 library(readr)
-
+source('./aux_functions.R')
 ## Read the data file
 data.raw <- read.csv("~/data/TOTUS/Ayushi_book/all_data_merged_chch_04012017.csv")
 ## Only using Christchurch City data
-data.raw <- subset(data.work,subset = TA2013_NAM == 'Christchurch City')
+data.raw <- subset(data.raw,subset = TA2013_NAM == 'Christchurch City')
 ## Select only useful variables (NO2 and areas)
 data.2006.mb <- data.raw[,c('AU06',
                          'URpop2006',
@@ -84,3 +84,33 @@ ggplot(data = data.long.au) +
   xlab('NZ Deprivation Index') +
   ylab('Long term NO2 concentration [ug/m3]') +
   scale_fill_discrete(name = 'Year')
+
+data.plot <- summarySE(data.long.au,measurevar = 'no2', groupvars = c('NZDep.rank.factor','year.factor'))
+
+pd <- position_dodge(0.1) # move them .05 to the left and right
+
+ggplot(data.plot, aes(x=NZDep.rank.factor, y=no2, group = year.factor, color = year.factor)) + 
+  geom_errorbar(aes(ymin=no2-se, ymax=no2+se), width=.1, position=pd) +
+  geom_line(position = pd) +
+  geom_point(position=pd) +
+  ylim(c(0,50))
+
+
+# Use 95% confidence intervals instead of SEM
+ggplot(data.plot, aes(x=NZDep.rank.factor, y=no2, fill=year.factor)) + 
+  geom_bar(position=position_dodge(), stat="identity") +
+  geom_errorbar(aes(ymin=no2-ci, ymax=no2+ci),
+                width=.2,                    # Width of the error bars
+                position=position_dodge(.9)) +
+  scale_fill_discrete(name = 'Year') +
+  ylab(expression("Long Term "*NO[2]*"[ug*"*m^-3*"]")) +
+  xlab('Deprivation Index\nLeast deprived\t\t\t\t\t\t\t\tMost deprived') +
+  ggtitle("Christchurch City")
+
+ggplot(data.wide.au) +
+  geom_boxplot(aes(x=NZDep.delta,y=no2.delta,group=NZDep.delta),varwidth = TRUE) +
+  ggtitle("Change in Deprivation index and NO2") +
+  xlab("No Change in Deprivation index\nDecrease in deprivation index\t\t\t\t\t\t\tIncrease in deprivation index") +
+  ylab("No Change in NO2\nDecrease in NO2\t\t\t\t\t\t\tIncrease in NO2") +
+  xlim(c(-3.5,3.5)) +
+  ylim(c(-13,13))
